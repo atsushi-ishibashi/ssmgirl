@@ -1,0 +1,10 @@
+hash: 4ef860924ad3b1e3e75bff6b9fb9abd2656701f3adda6d1d490a8b69e5e7adf8
+updated: 2017-08-09T12:50:50.26212777+09:00
+imports:
+- name: github.com/aws/aws-sdk-go
+  version: b33b08175d12b795daa7726c5577b39d06a2551c
+  subpackages:
+  - service/ssm
+- name: github.com/urfave/cli
+  version: 0bdeddeeb0f650497d603c4ad7b20cfe685682f6
+testImports: []

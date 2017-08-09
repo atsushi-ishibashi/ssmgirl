@@ -1,0 +1,8 @@
+package: github.com/atsushi-ishibashi/ssmgirl
+import:
+- package: github.com/aws/aws-sdk-go
+  version: ~1.10.20
+  subpackages:
+  - service/ssm
+- package: github.com/urfave/cli
+  version: ~1.19.1
