@@ -1,0 +1,8 @@
+instances:
+  - 12345
+  - 67890
+workdir: /home/user
+commands:
+  - echo "Hello World"
+  - DATE=`date +%s`
+  - touch $DATE.txt

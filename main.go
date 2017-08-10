@@ -13,11 +13,11 @@ func main() {
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "awsconf",
-			Usage: "~/.aws/credentialsから環境変数をセット(プロセスの間のみ)",
+			Usage: "set env var from ~/.aws/credentials in process",
 		},
 		cli.StringFlag{
 			Name:  "awsregion",
-			Usage: "AWS_DEFAULT_REGIONにセット(プロセスの間のみ)",
+			Usage: "set AWS_DEFAULT_REGION in process",
 			Value: "ap-northeast-1",
 		},
 	}

@@ -3,8 +3,11 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"time"
+
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/atsushi-ishibashi/ssmgirl/svc"
 	"github.com/atsushi-ishibashi/ssmgirl/util"
@@ -31,10 +34,10 @@ func NewShellCommand() cli.Command {
 				Name:  "cmd",
 				Usage: "command will be executed",
 			},
-			// cli.StringFlag{
-			// 	Name:  "file",
-			// 	Usage: "path to shell script",
-			// },
+			cli.StringFlag{
+				Name:  "path",
+				Usage: "path to yaml config file",
+			},
 			cli.BoolFlag{
 				Name:  "dry-run",
 				Usage: "dry-run. print instanceIDS, work directory and commands",
@@ -51,6 +54,7 @@ func NewShellCommand() cli.Command {
 			if c.Bool("dry-run") {
 				sh.dryPrint()
 			} else {
+				sh.dryPrint()
 				err = sh.execute()
 				if err != nil {
 					return err
@@ -70,19 +74,42 @@ type shell struct {
 
 func newShell(c *cli.Context) (*shell, error) {
 	sh := &shell{}
-
-	if len(c.StringSlice("instance")) == 0 {
+	//path flag
+	if c.String("path") != "" {
+		if err := sh.parseYaml(c.String("path")); err != nil {
+			return nil, err
+		}
+	}
+	//instance flag
+	if len(sh.instanceIDs) > 0 && len(c.StringSlice("instance")) > 0 {
+		return nil, util.ErrorRed(fmt.Sprint("--path and --instance conflict"))
+	}
+	if len(sh.instanceIDs) == 0 && len(c.StringSlice("instance")) == 0 {
 		return nil, util.ErrorRed(fmt.Sprint("--instance is required, more than 1"))
 	}
-	sh.instanceIDs = c.StringSlice("instance")
-	if c.String("workdir") == "" {
+	if len(c.StringSlice("instance")) > 0 {
+		sh.instanceIDs = c.StringSlice("instance")
+	}
+	//workdir flag
+	if sh.workDir != "" && c.String("workdir") != "" {
+		return nil, util.ErrorRed(fmt.Sprint("--path and --workdir conflict"))
+	}
+	if sh.workDir == "" && c.String("workdir") == "" {
 		return nil, util.ErrorRed(fmt.Sprint("--workdir is required"))
 	}
-	sh.workDir = c.String("workdir")
-	if len(c.StringSlice("cmd")) == 0 {
+	if c.String("workdir") != "" {
+		sh.workDir = c.String("workdir")
+	}
+	//cmd flag
+	if len(sh.cmds) > 0 && len(c.StringSlice("cmd")) > 0 {
+		return nil, util.ErrorRed(fmt.Sprint("--path and --cmd conflict"))
+	}
+	if len(sh.cmds) == 0 && len(c.StringSlice("cmd")) == 0 {
 		return nil, util.ErrorRed(fmt.Sprint("--cmd is required, more than 1"))
 	}
-	sh.cmds = c.StringSlice("cmd")
+	if len(c.StringSlice("cmd")) > 0 {
+		sh.cmds = c.StringSlice("cmd")
+	}
 
 	awsregion := os.Getenv("AWS_DEFAULT_REGION")
 	sess, err := session.NewSession()
@@ -193,4 +220,25 @@ func (sh *shell) waitUntilCommandFinish(sco *ssm.SendCommandOutput) {
 		}
 		watchingInstances = nextWatchInstances
 	}
+}
+
+type YamlConfig struct {
+	Instances []string `yaml:"instances"`
+	WorkDir   string   `yaml:"workdir"`
+	Commands  []string `yaml:"commands"`
+}
+
+func (sh *shell) parseYaml(path string) error {
+	buf, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	var yc YamlConfig
+	if err = yaml.Unmarshal(buf, &yc); err != nil {
+		return err
+	}
+	sh.instanceIDs = yc.Instances
+	sh.workDir = yc.WorkDir
+	sh.cmds = yc.Commands
+	return nil
 }
